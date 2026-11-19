@@ -33,3 +33,4 @@ The USB-C port goes straight to the ESP32-S3's built-in USB Serial/JTAG, so no d
 Don't pass `--flash-mode qio` to esptool: it rewrites the bootloader header, the ROM then can't read this board's flash and the chip resets every second before our code runs. Leave the header as built (`keep`); the bootloader switches to QIO itself.
 
 The app waits 5 s after power-on before touching any hardware, and halts on a crash instead of rebooting, so USB always comes up for esptool and the crash log.
+
