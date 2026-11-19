@@ -100,7 +100,7 @@ The demos also enable the ESP32 internal pull-ups (idf/device/lcd_init.c:293). x
 | Controller | ST77916, QSPI, RGB565 | M-p4; idf/device/lcd_init.c |
 | Resolution / offsets | 360x360, no column or row offset | xz/config.h:45-46; scr.h:11-12 |
 | QSPI clock in demos | 50 MHz | idf/device/lcd_init.c:259; scr.h:229 |
-| Orientation | IDF demo and xiaozhi mirror both X and Y (panel and touch) | idf/device/lcd_init.c:280, 309-310; xz/config.h:26-27 |
+| Orientation | With the factory init table, no mirroring is needed (panel or touch). The demos' mirror X+Y turns the image upside down. Confirmed on hardware 2026-11-19. | hello/main/board.c |
 | Colour inversion | INI sends 0x21 (INVON); Arduino also calls invertColor(true) | INI; scr.h:465 |
 | Backlight | LEDA to 3V3 directly, LEDK through 10R (R30) and AO3400A to GND. GPIO21 high = on, PWM-able (demo: LEDC 20 kHz, 10-bit) | M-p4; idf/device/backlight.c:25-27 |
 | LCD FPC | 20-pin FPC-05F-20PH20: 1 TP_INT, 2 TP_RST, 3 TP_SDA, 4 TP_SCL, 5 3V3, 6-7 GND, 8 QSPI_SCL, 9 CS, 10-13 D0-D3, 14 LCD_RST, 15 LCD_TE, 16 3V3, 17 GND, 18 LEDA, 19 LEDK, 20 GND | M-p4 |
@@ -111,7 +111,7 @@ The demos also enable the ESP32 internal pull-ups (idf/device/lcd_init.c:293). x
 
 | Item | Detail | Source |
 |---|---|---|
-| Encoder EC1 | Footprint SW2, part SSCM110100. A to GPIO2, B to GPIO1, common to GND, 10k pull-ups. Read by the `knob` component (quadrature in software). | M-p1, M-p5 |
+| Encoder EC1 | Footprint SW2, part SSCM110100. GPIO2 and GPIO1, common to GND, 10k pull-ups. **Not quadrature** (confirmed on hardware 2026-11-19): each detent pulses one line low for ~50-80 ms, GPIO2 anticlockwise, GPIO1 clockwise. The espressif `knob` component sees nothing; decode as in the vendor's bidi_switch_knob.c or hello/main/board.c. | M-p1, M-p5; console capture |
 | Encoder EC2 | Second footprint SW1, same part. A/B go only to the board FPC and end unconnected on the base. Probably an alternative placement. **UNVERIFIED** which footprint is fitted. | M-p1, B-p1 |
 | Knob push | None. The encoder has no switch contact on the schematic. | M-p1 |
 | BOOT button | SW1 on base, GPIO0 to GND | B-p1 |
@@ -212,3 +212,7 @@ So all flashing and console traffic goes over the ESP32-S3 native USB. With USB-
 - LRA motor location and resonant frequency (needed for DRV2605L auto-calibration).
 - ETA6003 charge current and SYS voltage on USB, which affects what BAT_ADC reads while charging.
 - Whether the PJ-342 switch really cuts the speaker on plug insertion.
+
+## Display init: use the factory table
+
+Confirmed on hardware 2026-11-19: hello/main/st77916_init.h holds the 184-command table extracted from the factory firmware (app offset 0x26b70). It matches the vendor INI. An earlier truncated copy (power, gamma and gate-timing pages missing) gave a noisy image that faded, so check the whole table is present if the panel misbehaves. The panel lifts very dark tones, so avoid subtle dark gradients: they band visibly. QSPI runs at 40 MHz.

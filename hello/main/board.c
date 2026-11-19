@@ -12,54 +12,20 @@
 #include "esp_lcd_st77916.h"
 #include "esp_lcd_touch_cst816s.h"
 #include "esp_log.h"
+#include "esp_heap_caps.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_lvgl_port.h"
-#include "iot_knob.h"
+#include "esp_timer.h"
 #include "led_strip.h"
 
 static const char *TAG = "board";
 
-// Panel init sequence from the manufacturer's demo (Demo_idf/demo/main/device/lcd_init.c),
-// which matches "ST77916_T 1.8'' 360x360 initial code_V1.0_20241015.INI".
-static const st77916_lcd_init_cmd_t lcd_init_cmds[] = {
-    {0xF0, (uint8_t[]){0x28}, 1, 0}, {0xF2, (uint8_t[]){0x28}, 1, 0},
-    {0x73, (uint8_t[]){0xF0}, 1, 0}, {0x7C, (uint8_t[]){0xD1}, 1, 0},
-    {0x9C, (uint8_t[]){0xDC}, 1, 0}, {0x9D, (uint8_t[]){0x04}, 1, 0},
-    {0x9E, (uint8_t[]){0x00}, 1, 0}, {0x9F, (uint8_t[]){0x00}, 1, 0},
-    {0xA0, (uint8_t[]){0x48}, 1, 0}, {0xA1, (uint8_t[]){0x00}, 1, 0},
-    {0xA2, (uint8_t[]){0x05}, 1, 0}, {0xA3, (uint8_t[]){0x02}, 1, 0},
-    {0xA4, (uint8_t[]){0xD5}, 1, 0}, {0xA5, (uint8_t[]){0x04}, 1, 0},
-    {0xA6, (uint8_t[]){0x00}, 1, 0}, {0xA7, (uint8_t[]){0x00}, 1, 0},
-    {0xA8, (uint8_t[]){0x48}, 1, 0}, {0xA9, (uint8_t[]){0x00}, 1, 0},
-    {0xAA, (uint8_t[]){0x07}, 1, 0}, {0xAB, (uint8_t[]){0x02}, 1, 0},
-    {0xAC, (uint8_t[]){0xD7}, 1, 0}, {0xAD, (uint8_t[]){0x04}, 1, 0},
-    {0xAE, (uint8_t[]){0x00}, 1, 0}, {0xAF, (uint8_t[]){0x00}, 1, 0},
-    {0xB0, (uint8_t[]){0x48}, 1, 0}, {0xB1, (uint8_t[]){0x00}, 1, 0},
-    {0xB2, (uint8_t[]){0x09}, 1, 0}, {0xB3, (uint8_t[]){0x02}, 1, 0},
-    {0xB4, (uint8_t[]){0xD9}, 1, 0}, {0xB5, (uint8_t[]){0x04}, 1, 0},
-    {0xB6, (uint8_t[]){0x00}, 1, 0}, {0xB7, (uint8_t[]){0x00}, 1, 0},
-    {0xB8, (uint8_t[]){0x48}, 1, 0}, {0xB9, (uint8_t[]){0x00}, 1, 0},
-    {0xBA, (uint8_t[]){0x0B}, 1, 0}, {0xBB, (uint8_t[]){0x02}, 1, 0},
-    {0xBC, (uint8_t[]){0xDB}, 1, 0}, {0xBD, (uint8_t[]){0x04}, 1, 0},
-    {0xBE, (uint8_t[]){0x00}, 1, 0}, {0xBF, (uint8_t[]){0x00}, 1, 0},
-    {0xC0, (uint8_t[]){0x10}, 1, 0}, {0xC1, (uint8_t[]){0x47}, 1, 0},
-    {0xC2, (uint8_t[]){0x56}, 1, 0}, {0xC3, (uint8_t[]){0x65}, 1, 0},
-    {0xC4, (uint8_t[]){0x74}, 1, 0}, {0xC5, (uint8_t[]){0x88}, 1, 0},
-    {0xC6, (uint8_t[]){0x99}, 1, 0}, {0xC7, (uint8_t[]){0x01}, 1, 0},
-    {0xC8, (uint8_t[]){0xBB}, 1, 0}, {0xC9, (uint8_t[]){0xAA}, 1, 0},
-    {0xD0, (uint8_t[]){0x10}, 1, 0}, {0xD1, (uint8_t[]){0x47}, 1, 0},
-    {0xD2, (uint8_t[]){0x56}, 1, 0}, {0xD3, (uint8_t[]){0x65}, 1, 0},
-    {0xD4, (uint8_t[]){0x74}, 1, 0}, {0xD5, (uint8_t[]){0x88}, 1, 0},
-    {0xD6, (uint8_t[]){0x99}, 1, 0}, {0xD7, (uint8_t[]){0x01}, 1, 0},
-    {0xD8, (uint8_t[]){0xBB}, 1, 0}, {0xD9, (uint8_t[]){0xAA}, 1, 0},
-    {0xF3, (uint8_t[]){0x01}, 1, 0}, {0xF0, (uint8_t[]){0x00}, 1, 0},
-    {0x21, (uint8_t[]){0x00}, 1, 0}, {0x11, (uint8_t[]){0x00}, 1, 120},
-    {0x29, (uint8_t[]){0x00}, 1, 0},
-};
+#include "st77916_init.h"
 
 static lv_display_t *s_disp;
 static i2c_master_bus_handle_t s_i2c;
 static led_strip_handle_t s_leds;
-static knob_handle_t s_knob;
 static knob_step_cb_t s_knob_cb;
 static adc_oneshot_unit_handle_t s_adc;
 static adc_cali_handle_t s_adc_cali;
@@ -114,12 +80,12 @@ static void display_init(void)
 
     esp_lcd_panel_io_handle_t io;
     esp_lcd_panel_io_spi_config_t io_cfg = ST77916_PANEL_IO_QSPI_CONFIG(PIN_LCD_CS, NULL, NULL);
-    io_cfg.pclk_hz = 50 * 1000 * 1000;
+    io_cfg.pclk_hz = 40 * 1000 * 1000;
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI2_HOST, &io_cfg, &io));
 
     st77916_vendor_config_t vendor = {
-        .init_cmds = lcd_init_cmds,
-        .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(lcd_init_cmds[0]),
+        .init_cmds = factory_lcd_init_cmds,
+        .init_cmds_size = sizeof(factory_lcd_init_cmds) / sizeof(factory_lcd_init_cmds[0]),
         .flags.use_qspi_interface = 1,
     };
     esp_lcd_panel_dev_config_t panel_cfg = {
@@ -133,6 +99,7 @@ static void display_init(void)
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel));
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel, true));
+
 
     lvgl_port_cfg_t port_cfg = ESP_LVGL_PORT_INIT_CONFIG();
     port_cfg.task_priority = 5;
@@ -148,8 +115,8 @@ static void display_init(void)
         .hres = LCD_H_RES,
         .vres = LCD_V_RES,
         .color_format = LV_COLOR_FORMAT_RGB565,
-        // The manufacturer mirrors both axes: the panel is mounted rotated 180 degrees.
-        .rotation = {.swap_xy = false, .mirror_x = true, .mirror_y = true},
+        // The factory init table already sets the scan direction; no extra mirroring.
+        .rotation = {.swap_xy = false, .mirror_x = false, .mirror_y = false},
         .flags = {.buff_dma = true, .swap_bytes = true},
     };
     s_disp = lvgl_port_add_disp(&disp_cfg);
@@ -161,7 +128,7 @@ static void display_init(void)
     esp_lcd_touch_config_t tp_cfg = {
         .x_max = LCD_H_RES, .y_max = LCD_V_RES,
         .rst_gpio_num = PIN_TP_RST, .int_gpio_num = PIN_TP_INT,
-        .flags = {.swap_xy = 0, .mirror_x = 1, .mirror_y = 1},
+        .flags = {.swap_xy = 0, .mirror_x = 0, .mirror_y = 0},
     };
     esp_lcd_touch_handle_t tp;
     if (esp_lcd_touch_new_i2c_cst816s(tp_io, &tp_cfg, &tp) == ESP_OK) {
@@ -172,23 +139,46 @@ static void display_init(void)
     }
 }
 
-static void knob_left(void *arg, void *data) { if (s_knob_cb) s_knob_cb(-1); }
-static void knob_right(void *arg, void *data) { if (s_knob_cb) s_knob_cb(+1); }
+// The bezel is not a quadrature encoder: each detent pulses one line low,
+// GPIO2 for one direction and GPIO1 for the other (seen on the console, and
+// matching the vendor's bidi_switch_knob.c). Poll both, debounce, and count
+// a step when a line returns high after being low for a few samples.
+#define KNOB_POLL_US 3000
+#define KNOB_DEBOUNCE 2
+
+typedef struct {
+    gpio_num_t pin;
+    int dir;
+    uint8_t low_count;
+} knob_line_t;
+
+static knob_line_t s_lines[2] = {{PIN_KNOB_A, -1, 0}, {PIN_KNOB_B, +1, 0}};  // GPIO2 pulses on anticlockwise
+
+static void knob_poll(void *arg)
+{
+    for (int i = 0; i < 2; i++) {
+        knob_line_t *l = &s_lines[i];
+        if (gpio_get_level(l->pin) == 0) {
+            if (l->low_count < 255) l->low_count++;
+        } else {
+            if (l->low_count >= KNOB_DEBOUNCE && s_knob_cb) s_knob_cb(l->dir);
+            l->low_count = 0;
+        }
+    }
+}
 
 static void knob_init(void)
 {
-    knob_config_t cfg = {
-        .default_direction = 0,
-        .gpio_encoder_a = PIN_KNOB_A,
-        .gpio_encoder_b = PIN_KNOB_B,
+    gpio_config_t io = {
+        .pin_bit_mask = (1ULL << PIN_KNOB_A) | (1ULL << PIN_KNOB_B),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
     };
-    s_knob = iot_knob_create(&cfg);
-    if (!s_knob) {
-        ESP_LOGE(TAG, "knob init failed");
-        return;
-    }
-    iot_knob_register_cb(s_knob, KNOB_LEFT, knob_left, NULL);
-    iot_knob_register_cb(s_knob, KNOB_RIGHT, knob_right, NULL);
+    ESP_ERROR_CHECK(gpio_config(&io));
+    const esp_timer_create_args_t t = {.callback = knob_poll, .name = "knob"};
+    esp_timer_handle_t h;
+    ESP_ERROR_CHECK(esp_timer_create(&t, &h));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(h, KNOB_POLL_US));
 }
 
 static void leds_init(void)

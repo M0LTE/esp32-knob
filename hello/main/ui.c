@@ -31,7 +31,7 @@ static void apply_value(void)
     lv_arc_set_value(s_arc, s_val);
     lv_obj_set_style_arc_color(s_arc, c, LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(s_arc, c, LV_PART_KNOB);
-    lv_obj_set_style_bg_color(s_pulse, c, 0);
+    lv_obj_set_style_border_color(s_pulse, c, 0);
     lv_label_set_text_fmt(s_value, "%d", s_val);
 }
 
@@ -93,9 +93,15 @@ static void tick(lv_timer_t *t)
     float lvl = (db + 70) / 50;  // -70 dBFS .. -20 dBFS -> 0..1
     lvl = lvl < 0 ? 0 : lvl > 1 ? 1 : lvl;
     s_level = s_level * 0.6f + lvl * 0.4f;
+    // Redraw the ring only when it moves by a few pixels, to keep refreshes small.
+    static int last_sz;
     int sz = 150 + (int)(s_level * 120);
-    lv_obj_set_size(s_pulse, sz, sz);
-    lv_obj_set_style_bg_opa(s_pulse, (lv_opa_t)(25 + s_level * 90), 0);
+    sz &= ~3;
+    if (sz != last_sz) {
+        last_sz = sz;
+        lv_obj_set_size(s_pulse, sz, sz);
+        lv_obj_set_style_border_opa(s_pulse, (lv_opa_t)(60 + s_level * 195), 0);
+    }
 
     static int n;
     if (++n % 25 == 0) {
@@ -138,20 +144,57 @@ static void leds_task(void *arg)
     }
 }
 
+static void colour_card(void)
+{
+    static const struct { uint32_t rgb; const char *name; } sw[] = {
+        {0x000000, "black"}, {0xFFFFFF, "white"}, {0xFF0000, "red"}, {0x00FF00, "green"},
+        {0x0000FF, "blue"}, {0x808080, "grey"}, {0x05070D, "near-black"}, {0x121A2E, "navy"},
+    };
+    lv_obj_t *scr = lv_screen_active();
+    lv_obj_set_style_bg_color(scr, lv_color_black(), 0);
+    for (int i = 0; i < 8; i++) {
+        lv_obj_t *o = lv_obj_create(scr);
+        lv_obj_remove_flag(o, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_size(o, 120, 60);
+        lv_obj_set_style_radius(o, 0, 0);
+        lv_obj_set_style_border_width(o, 1, 0);
+        lv_obj_set_style_border_color(o, lv_color_hex(0x808080), 0);
+        lv_obj_set_style_bg_color(o, lv_color_hex(sw[i].rgb), 0);
+        lv_obj_set_pos(o, 60 + (i % 2) * 120, 60 + (i / 2) * 60);
+        lv_obj_t *l = lv_label_create(o);
+        lv_label_set_text(l, sw[i].name);
+        lv_obj_set_style_text_font(l, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_color(l, i == 1 || i == 3 || i == 5 ? lv_color_black() : lv_color_white(), 0);
+        lv_obj_center(l);
+    }
+    lv_obj_t *t = lv_label_create(scr);
+    lv_label_set_text(t, "TOP");
+    lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 22);
+}
+
 void ui_start(void)
 {
+#ifdef COLOUR_CARD
+    lvgl_port_lock(0);
+    colour_card();
+    lvgl_port_unlock();
+    vTaskDelay(pdMS_TO_TICKS(10000));
+    lvgl_port_lock(0);
+    lv_obj_clean(lv_screen_active());
+    lvgl_port_unlock();
+#endif
     lvgl_port_lock(0);
     s_scr = lv_screen_active();
-    lv_obj_set_style_bg_color(s_scr, lv_color_hex(0x05070d), 0);
-    lv_obj_set_style_bg_grad_color(s_scr, lv_color_hex(0x121a2e), 0);
-    lv_obj_set_style_bg_grad_dir(s_scr, LV_GRAD_DIR_VER, 0);
+    // Plain black: this panel lifts very dark tones, so dark gradients band visibly.
+    lv_obj_set_style_bg_color(s_scr, lv_color_black(), 0);
     lv_obj_remove_flag(s_scr, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(s_scr, on_press, LV_EVENT_PRESSED, NULL);
 
     s_pulse = lv_obj_create(s_scr);
     lv_obj_remove_flag(s_pulse, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_radius(s_pulse, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_border_width(s_pulse, 0, 0);
+    lv_obj_set_style_bg_opa(s_pulse, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(s_pulse, 3, 0);
     lv_obj_set_size(s_pulse, 150, 150);
     lv_obj_center(s_pulse);
 
@@ -163,7 +206,7 @@ void ui_start(void)
     lv_obj_remove_flag(s_arc, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_set_style_arc_width(s_arc, 18, LV_PART_MAIN);
     lv_obj_set_style_arc_width(s_arc, 18, LV_PART_INDICATOR);
-    lv_obj_set_style_arc_color(s_arc, lv_color_hex(0x1c2438), LV_PART_MAIN);
+    lv_obj_set_style_arc_color(s_arc, lv_color_hex(0x1a1a1a), LV_PART_MAIN);
     lv_obj_set_style_pad_all(s_arc, 4, LV_PART_KNOB);
     lv_obj_set_style_shadow_width(s_arc, 18, LV_PART_KNOB);
     lv_obj_set_style_shadow_color(s_arc, lv_color_white(), LV_PART_KNOB);
