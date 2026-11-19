@@ -25,7 +25,11 @@ The manufacturer's download is kept locally in `mfr-download/` and is not commit
 ```
 . ~/esp/esp-idf-v5.5.1/export.sh
 cd hello && idf.py build
-esptool --port /dev/ttyACM0 write-flash 0x0 build/bootloader/bootloader.bin 0x8000 build/partition_table/partition-table.bin 0x10000 build/knob_hello.bin
+esptool --port /dev/ttyACM0 write-flash --flash-mode keep 0x0 build/bootloader/bootloader.bin 0x8000 build/partition_table/partition-table.bin 0x10000 build/knob_hello.bin
 ```
 
 The USB-C port goes straight to the ESP32-S3's built-in USB Serial/JTAG, so no driver is needed. The base's slide switch must be on (left). To force download mode hold BOOT while switching on.
+
+Don't pass `--flash-mode qio` to esptool: it rewrites the bootloader header, the ROM then can't read this board's flash and the chip resets every second before our code runs. Leave the header as built (`keep`); the bootloader switches to QIO itself.
+
+The app waits 5 s after power-on before touching any hardware, and halts on a crash instead of rebooting, so USB always comes up for esptool and the crash log.

@@ -89,7 +89,7 @@ One bus, GPIO9 SDA / GPIO10 SCL, 2.2k external pull-ups (M-p5). Touch and haptic
 | Device | 7-bit address | Where | Source |
 |---|---|---|---|
 | CST816 (code uses CST816S driver) | 0x15 | On the LCD panel flex, via LCD FPC pins 1-4 | xz/taiji_pi_s3.cc:296; spec in 1-Instructions PDF |
-| DRV2605L haptic driver (U13) | 0x5A | Main board | M-p1. Address is **UNVERIFIED** from this download (fixed 0x5A per TI datasheet); no code in the download talks to it. |
+| DRV2605L haptic driver (U13) | 0x5A | Main board | M-p1. Confirmed on hardware 2026-11-19: answers at 0x5A, STATUS 0xE0 = device ID 7 (DRV2605L). |
 
 The demos also enable the ESP32 internal pull-ups (idf/device/lcd_init.c:293). xiaozhi uses I2C port 1, the IDF demo port 0; either works.
 

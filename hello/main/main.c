@@ -5,6 +5,7 @@
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_psram.h"
+#include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "haptic.h"
@@ -14,11 +15,19 @@ static const char *TAG = "hello";
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "knob hello starting, PSRAM %u KB", (unsigned)(esp_psram_get_size() / 1024));
+    for (int i = 5; i > 0; i--) {
+        ESP_LOGI(TAG, "knob hello starting in %d, PSRAM %u KB, reset reason %d", i,
+                 (unsigned)(esp_psram_get_size() / 1024), (int)esp_reset_reason());
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
     board_init();
+    ESP_LOGI(TAG, "step: board ok");
     haptic_init();
+    ESP_LOGI(TAG, "step: haptic ok");
     audio_init();
+    ESP_LOGI(TAG, "step: audio ok");
     ui_start();
+    ESP_LOGI(TAG, "step: ui ok");
     board_backlight(0);
     for (int i = 0; i <= 100; i += 4) {
         board_backlight(i);

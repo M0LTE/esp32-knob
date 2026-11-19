@@ -245,10 +245,16 @@ float board_battery_volts(void)
 
 void board_init(void)
 {
+    ESP_LOGI(TAG, "init backlight_init");
     backlight_init();
+    ESP_LOGI(TAG, "init i2c_init");
     i2c_init();
+    ESP_LOGI(TAG, "init display_init");
     display_init();
+    ESP_LOGI(TAG, "init knob_init");
     knob_init();
+    ESP_LOGI(TAG, "init leds_init");
     leds_init();
+    ESP_LOGI(TAG, "init battery_init");
     battery_init();
 }
