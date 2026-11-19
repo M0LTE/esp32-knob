@@ -1,0 +1,7 @@
+mfr-download/
+dumps/
+.pio/
+build/
+managed_components/
+sdkconfig.old
+__pycache__/

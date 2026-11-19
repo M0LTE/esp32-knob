@@ -1,0 +1,31 @@
+# esp32-knob
+
+Bring-up and apps for the Guition JC3636K718C_I_Y1: a 1.8 inch 360x360 round touch display on an ESP32-S3R8 (16 MB flash, 8 MB PSRAM), with an aluminium rotary bezel, a 12-LED ring, a haptic motor, a speaker plus 3.5 mm line out, a PDM microphone, a TF card slot and a Li-ion charger in the base.
+
+## What's here
+
+| Path | What |
+|------|------|
+| `docs/hardware.md` | Pin map, I2C devices, audio, power and USB, each fact traced to the schematic or vendor code |
+| `docs/vendor-firmware.md` | Audit of the firmware the board shipped with: what it talks to, what it listens on, what was left in flash |
+| `hello/` | ESP-IDF 5.5 + LVGL 9 bring-up app: knob drives an arc, the LED ring and haptic ticks; tapping the glass gives a ripple, a chime and a click; the mic pulses the centre |
+| `dumps/` (not in git) | Factory flash backup and eFuse summary; attached to the private `factory-backup` release instead |
+
+The manufacturer's download is kept locally in `mfr-download/` and is not committed (448 MB, third-party).
+
+## Factory state and the wipe
+
+- eFuses were clean: no secure boot, no flash encryption, no keys, download mode not disabled. Nothing was burned.
+- The board ran `PROJECT_N7_IDF` built 13 Jan 2026, a slightly older build than the 29 Jan image in the download. The differences are minor Wi-Fi reconnect changes; no new hosts or services.
+- Full 16 MB flash was read, verified on-chip (MD5), then the whole chip was erased and read back as all 0xFF before flashing our app.
+- The factory backup (sha256 `bc344f3a91884c2340b7387c2324fc72cf1e899c0a0ea4aed704ff09ab96bbe3`) can be restored with `esptool write-flash 0 factory-flash.bin`.
+
+## Build and flash
+
+```
+. ~/esp/esp-idf-v5.5.1/export.sh
+cd hello && idf.py build
+esptool --port /dev/ttyACM0 write-flash 0x0 build/bootloader/bootloader.bin 0x8000 build/partition_table/partition-table.bin 0x10000 build/knob_hello.bin
+```
+
+The USB-C port goes straight to the ESP32-S3's built-in USB Serial/JTAG, so no driver is needed. The base's slide switch must be on (left). To force download mode hold BOOT while switching on.
