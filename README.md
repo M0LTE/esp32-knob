@@ -9,7 +9,7 @@ Bring-up and apps for the Guition JC3636K718C_I_Y1: a 1.8 inch 360x360 round tou
 | `docs/hardware.md` | Pin map, I2C devices, audio, power and USB, each fact traced to the schematic or vendor code |
 | `docs/vendor-firmware.md` | Audit of the firmware the board shipped with: what it talks to, what it listens on, what was left in flash |
 | `hello/` | ESP-IDF 5.5 + LVGL 9 bring-up app: knob drives an arc, the LED ring and haptic ticks; tapping the glass gives a ripple, a chime and a click; the mic pulses the centre |
-| `dumps/` (not in git) | Factory flash backup and eFuse summary; attached to the private `factory-backup` release instead |
+| `dumps/` (not in git) | Factory flash backup and eFuse summary; kept privately, not published (the vendor firmware is not ours to redistribute) |
 
 The manufacturer's download is kept locally in `mfr-download/` and is not committed (448 MB, third-party).
 
