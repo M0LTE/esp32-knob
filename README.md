@@ -34,3 +34,7 @@ Don't pass `--flash-mode qio` to esptool: it rewrites the bootloader header, the
 
 The app waits 5 s after power-on before touching any hardware, and halts on a crash instead of rebooting, so USB always comes up for esptool and the crash log.
 
+
+## Licence
+
+AGPL-3.0-or-later. See [LICENSE](LICENSE).
