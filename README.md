@@ -1,6 +1,6 @@
 # esp32-knob
 
-Bring-up and apps for the Guition JC3636K718C_I_Y1: a 1.8 inch 360x360 round touch display on an ESP32-S3R8 (16 MB flash, 8 MB PSRAM), with an aluminium rotary bezel, a 12-LED ring, a haptic motor, a speaker plus 3.5 mm line out, a PDM microphone, a TF card slot and a Li-ion charger in the base.
+Board bring-up for the Guition JC3636K718C_I_Y1: a 1.8 inch 360x360 round touch display on an ESP32-S3R8 (16 MB flash, 8 MB PSRAM), with an aluminium rotary bezel, a 12-LED ring, a haptic motor, a speaker plus 3.5 mm line out, a PDM microphone, a TF card slot and a Li-ion charger in the base.
 
 ## What's here
 
