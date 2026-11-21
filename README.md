@@ -35,6 +35,10 @@ Don't pass `--flash-mode qio` to esptool: it rewrites the bootloader header, the
 The app waits 5 s after power-on before touching any hardware, and halts on a crash instead of rebooting, so USB always comes up for esptool and the crash log.
 
 
+## Built on this
+
+[esp32-knob-pages](https://github.com/M0LTE/esp32-knob-pages) is a desk status display for this board: hand-drawn LVGL pages (network, packet station, modem, energy, rooms, aircraft, live waterfall with audio), alerts, data sources that run on the knob, a settings page served by the knob, over-the-air updates with rollback, and a desktop simulator.
+
 ## Licence
 
 AGPL-3.0-or-later. See [LICENSE](LICENSE).
