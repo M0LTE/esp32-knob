@@ -37,7 +37,7 @@ The app waits 5 s after power-on before touching any hardware, and halts on a cr
 
 ## Built on this
 
-[esp32-knob-pages](https://github.com/M0LTE/esp32-knob-pages) is a desk status display for this board: hand-drawn LVGL pages (network, packet station, modem, energy, rooms, aircraft, live waterfall with audio, a 2.4 GHz scope that uses the board's own Wi-Fi radio as a receiver), alerts, data sources that run on the knob, a settings page served by the knob, over-the-air updates with rollback, and a desktop simulator. Its [docs/memory.md](https://github.com/M0LTE/esp32-knob-pages/blob/main/docs/memory.md) records where this board's internal RAM goes with all of that running.
+[esp32-knob-pages](https://github.com/M0LTE/esp32-knob-pages) is a desk status display for this board: hand-drawn LVGL pages (an overview of the rest on one screen, network, packet station, modem, energy, rooms, aircraft, live waterfall with audio, a 2.4 GHz scope that uses the board's own Wi-Fi radio as a receiver), alerts, data sources that run on the knob, a settings page served by the knob, over-the-air updates with rollback, and a desktop simulator. Its [docs/memory.md](https://github.com/M0LTE/esp32-knob-pages/blob/main/docs/memory.md) records where this board's internal RAM goes with all of that running.
 
 ## Licence
 
